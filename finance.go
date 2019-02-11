@@ -79,24 +79,50 @@ func NewCharge(alias string, paymentId string, amount int64, description string)
 	return ch, charge, nil
 }
 
-func GetChargeAsync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge)) error {
-	return charges.Read(alias, key, nil, func(entry *bcgo.BlockEntry, data []byte) {
+func NewCustomerCharge(customer *Customer, amount int64, description string) (*stripe.Charge, *Charge, error) {
+	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
+
+	chargeParams := &stripe.ChargeParams{
+		Amount:      stripe.Int64(amount),
+		Currency:    stripe.String(string(stripe.CurrencyUSD)),
+		Customer:    stripe.String(customer.CustomerId),
+		Description: stripe.String(description),
+	}
+	ch, err := charge.New(chargeParams)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	charge := &Charge{
+		Alias:      customer.Alias,
+		Processor:  PaymentProcessor_STRIPE,
+		CustomerId: customer.CustomerId,
+		ChargeId:   ch.ID,
+	}
+	log.Println("Charge", charge)
+	return ch, charge, nil
+}
+
+func GetChargeAsync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge) error) error {
+	return charges.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Charge
 		charge := &Charge{}
 		err := proto.Unmarshal(data, charge)
 		if err != nil {
-			log.Println(err)
+			return err
 		} else if charge.Alias == chargeAlias {
-			callback(charge)
+			return callback(charge)
 		}
+		return nil
 	})
 }
 
 func GetChargeSync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string) (*Charge, error) {
 	// Load Charge Information
 	ch := make(chan *Charge, 1)
-	err := GetChargeAsync(charges, alias, key, chargeAlias, func(charge *Charge) {
+	err := GetChargeAsync(charges, alias, key, chargeAlias, func(charge *Charge) error {
 		ch <- charge
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -134,24 +160,26 @@ func NewCustomer(alias string, email string, paymentId string, description strin
 	return c, customer, nil
 }
 
-func GetCustomerAsync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer)) error {
-	return customers.Read(alias, key, nil, func(entry *bcgo.BlockEntry, data []byte) {
+func GetCustomerAsync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer) error) error {
+	return customers.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Customer
 		customer := &Customer{}
 		err := proto.Unmarshal(data, customer)
 		if err != nil {
-			log.Println(err)
+			return err
 		} else if customer.Alias == customerAlias {
-			callback(customer)
+			return callback(customer)
 		}
+		return nil
 	})
 }
 
 func GetCustomerSync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string) (*Customer, error) {
 	// Load Customer Information
 	ch := make(chan *Customer, 1)
-	err := GetCustomerAsync(customers, alias, key, customerAlias, func(customer *Customer) {
+	err := GetCustomerAsync(customers, alias, key, customerAlias, func(customer *Customer) error {
 		ch <- customer
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -197,24 +225,26 @@ func NewSubscription(alias string, customerId string, paymentId string, productI
 	return s, subscription, nil
 }
 
-func GetSubscriptionAsync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription)) error {
-	return subscriptions.Read(alias, key, nil, func(entry *bcgo.BlockEntry, data []byte) {
+func GetSubscriptionAsync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription) error) error {
+	return subscriptions.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Subscription
 		subscription := &Subscription{}
 		err := proto.Unmarshal(data, subscription)
 		if err != nil {
-			log.Println(err)
+			return err
 		} else if subscription.Alias == subscriptionAlias {
-			callback(subscription)
+			return callback(subscription)
 		}
+		return nil
 	})
 }
 
 func GetSubscriptionSync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string) (*Subscription, error) {
 	// Load Subscription Information
 	ch := make(chan *Subscription, 1)
-	err := GetSubscriptionAsync(subscriptions, alias, key, subscriptionAlias, func(subscription *Subscription) {
+	err := GetSubscriptionAsync(subscriptions, alias, key, subscriptionAlias, func(subscription *Subscription) error {
 		ch <- subscription
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -251,24 +281,26 @@ func NewUsageRecord(alias string, subscription string, timestamp int64, size int
 	return ur, usage, nil
 }
 
-func GetUsageRecordAsync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string, callback func(*UsageRecord)) error {
-	return usages.Read(alias, key, nil, func(entry *bcgo.BlockEntry, data []byte) {
+func GetUsageRecordAsync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string, callback func(*UsageRecord) error) error {
+	return usages.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as UsageRecord
 		usage := &UsageRecord{}
 		err := proto.Unmarshal(data, usage)
 		if err != nil {
-			log.Println(err)
+			return err
 		} else if usage.Alias == usageAlias {
-			callback(usage)
+			return callback(usage)
 		}
+		return nil
 	})
 }
 
 func GetUsageRecordSync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string) (*UsageRecord, error) {
 	// Load UsageRecord Information
 	ch := make(chan *UsageRecord, 1)
-	err := GetUsageRecordAsync(usages, alias, key, usageAlias, func(usage *UsageRecord) {
+	err := GetUsageRecordAsync(usages, alias, key, usageAlias, func(usage *UsageRecord) error {
 		ch <- usage
+		return nil
 	})
 	if err != nil {
 		return nil, err
