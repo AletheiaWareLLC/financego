@@ -40,19 +40,19 @@ const (
 )
 
 func OpenChargeChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenChannel(CHARGE)
+	return bcgo.OpenAndSyncChannel(CHARGE)
 }
 
 func OpenCustomerChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenChannel(CUSTOMER)
+	return bcgo.OpenAndSyncChannel(CUSTOMER)
 }
 
 func OpenSubscriptionChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenChannel(SUBSCRIPTION)
+	return bcgo.OpenAndSyncChannel(SUBSCRIPTION)
 }
 
 func OpenUsageRecordChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenChannel(USAGE_RECORD)
+	return bcgo.OpenAndSyncChannel(USAGE_RECORD)
 }
 
 func NewCharge(alias string, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
