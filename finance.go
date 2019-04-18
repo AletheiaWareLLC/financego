@@ -18,7 +18,6 @@ package financego
 
 import (
 	"crypto/rsa"
-	"errors"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/golang/protobuf/proto"
 	"github.com/stripe/stripe-go"
@@ -29,7 +28,6 @@ import (
 	"github.com/stripe/stripe-go/webhook"
 	"log"
 	"os"
-	"time"
 )
 
 const (
@@ -79,62 +77,6 @@ func NewCharge(alias string, paymentId string, amount int64, description string)
 	return ch, charge, nil
 }
 
-func NewCustomerCharge(customer *Customer, amount int64, description string) (*stripe.Charge, *Charge, error) {
-	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
-
-	chargeParams := &stripe.ChargeParams{
-		Amount:      stripe.Int64(amount),
-		Currency:    stripe.String(string(stripe.CurrencyUSD)),
-		Customer:    stripe.String(customer.CustomerId),
-		Description: stripe.String(description),
-	}
-	ch, err := charge.New(chargeParams)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	charge := &Charge{
-		Alias:      customer.Alias,
-		Processor:  PaymentProcessor_STRIPE,
-		CustomerId: customer.CustomerId,
-		ChargeId:   ch.ID,
-	}
-	log.Println("Charge", charge)
-	return ch, charge, nil
-}
-
-func GetChargeAsync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge) error) error {
-	return charges.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
-		// Unmarshal as Charge
-		charge := &Charge{}
-		err := proto.Unmarshal(data, charge)
-		if err != nil {
-			return err
-		} else if charge.Alias == chargeAlias {
-			return callback(charge)
-		}
-		return nil
-	})
-}
-
-func GetChargeSync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string) (*Charge, error) {
-	// Load Charge Information
-	ch := make(chan *Charge, 1)
-	err := GetChargeAsync(charges, alias, key, chargeAlias, func(charge *Charge) error {
-		ch <- charge
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	select {
-	case charge := <-ch:
-		return charge, nil
-	case <-time.After(1 * time.Minute):
-		return nil, errors.New("Timeout getting charge - 1 minute")
-	}
-}
-
 func NewCustomer(alias string, email string, paymentId string, description string) (*stripe.Customer, *Customer, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	// Create new Stripe customer
@@ -160,36 +102,28 @@ func NewCustomer(alias string, email string, paymentId string, description strin
 	return c, customer, nil
 }
 
-func GetCustomerAsync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer) error) error {
-	return customers.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
-		// Unmarshal as Customer
-		customer := &Customer{}
-		err := proto.Unmarshal(data, customer)
-		if err != nil {
-			return err
-		} else if customer.Alias == customerAlias {
-			return callback(customer)
-		}
-		return nil
-	})
-}
+func NewCustomerCharge(customer *Customer, amount int64, description string) (*stripe.Charge, *Charge, error) {
+	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
-func GetCustomerSync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string) (*Customer, error) {
-	// Load Customer Information
-	ch := make(chan *Customer, 1)
-	err := GetCustomerAsync(customers, alias, key, customerAlias, func(customer *Customer) error {
-		ch <- customer
-		return nil
-	})
+	chargeParams := &stripe.ChargeParams{
+		Amount:      stripe.Int64(amount),
+		Currency:    stripe.String(string(stripe.CurrencyUSD)),
+		Customer:    stripe.String(customer.CustomerId),
+		Description: stripe.String(description),
+	}
+	ch, err := charge.New(chargeParams)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	select {
-	case customer := <-ch:
-		return customer, nil
-	case <-time.After(1 * time.Minute):
-		return nil, errors.New("Timeout getting customer - 1 minute")
+
+	charge := &Charge{
+		Alias:      customer.Alias,
+		Processor:  PaymentProcessor_STRIPE,
+		CustomerId: customer.CustomerId,
+		ChargeId:   ch.ID,
 	}
+	log.Println("Charge", charge)
+	return ch, charge, nil
 }
 
 func NewSubscription(alias string, customerId string, paymentId string, productId string, planId string) (*stripe.Subscription, *Subscription, error) {
@@ -225,38 +159,6 @@ func NewSubscription(alias string, customerId string, paymentId string, productI
 	return s, subscription, nil
 }
 
-func GetSubscriptionAsync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription) error) error {
-	return subscriptions.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
-		// Unmarshal as Subscription
-		subscription := &Subscription{}
-		err := proto.Unmarshal(data, subscription)
-		if err != nil {
-			return err
-		} else if subscription.Alias == subscriptionAlias {
-			return callback(subscription)
-		}
-		return nil
-	})
-}
-
-func GetSubscriptionSync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string) (*Subscription, error) {
-	// Load Subscription Information
-	ch := make(chan *Subscription, 1)
-	err := GetSubscriptionAsync(subscriptions, alias, key, subscriptionAlias, func(subscription *Subscription) error {
-		ch <- subscription
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	select {
-	case subscription := <-ch:
-		return subscription, nil
-	case <-time.After(1 * time.Minute):
-		return nil, errors.New("Timeout getting subscription - 1 minute")
-	}
-}
-
 func NewUsageRecord(alias string, subscription string, timestamp int64, size int64) (*stripe.UsageRecord, *UsageRecord, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
@@ -281,6 +183,96 @@ func NewUsageRecord(alias string, subscription string, timestamp int64, size int
 	return ur, usage, nil
 }
 
+func GetChargeAsync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge) error) error {
+	return charges.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+		// Unmarshal as Charge
+		charge := &Charge{}
+		err := proto.Unmarshal(data, charge)
+		if err != nil {
+			return err
+		} else if charge.Alias == chargeAlias {
+			return callback(charge)
+		}
+		return nil
+	})
+}
+
+func GetChargeSync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string) (*Charge, error) {
+	var charge *Charge
+	if err := GetChargeAsync(charges, alias, key, chargeAlias, func(c *Charge) error {
+		charge = c
+		return bcgo.StopIterationError{}
+	}); err != nil {
+		switch err.(type) {
+		case *bcgo.StopIterationError:
+			// Do nothing
+		default:
+			return nil, err
+		}
+	}
+	return charge, nil
+}
+
+func GetCustomerAsync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer) error) error {
+	return customers.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+		// Unmarshal as Customer
+		customer := &Customer{}
+		err := proto.Unmarshal(data, customer)
+		if err != nil {
+			return err
+		} else if customer.Alias == customerAlias {
+			return callback(customer)
+		}
+		return nil
+	})
+}
+
+func GetCustomerSync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string) (*Customer, error) {
+	var customer *Customer
+	if err := GetCustomerAsync(customers, alias, key, customerAlias, func(c *Customer) error {
+		customer = c
+		return bcgo.StopIterationError{}
+	}); err != nil {
+		switch err.(type) {
+		case *bcgo.StopIterationError:
+			// Do nothing
+		default:
+			return nil, err
+		}
+	}
+	return customer, nil
+}
+
+func GetSubscriptionAsync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription) error) error {
+	return subscriptions.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+		// Unmarshal as Subscription
+		subscription := &Subscription{}
+		err := proto.Unmarshal(data, subscription)
+		if err != nil {
+			return err
+		} else if subscription.Alias == subscriptionAlias {
+			return callback(subscription)
+		}
+		return nil
+	})
+}
+
+func GetSubscriptionSync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string) (*Subscription, error) {
+	var subscription *Subscription
+	if err := GetSubscriptionAsync(subscriptions, alias, key, subscriptionAlias, func(s *Subscription) error {
+		subscription = s
+		return bcgo.StopIterationError{}
+	}); err != nil {
+		switch err.(type) {
+		case *bcgo.StopIterationError:
+			// Do nothing
+		default:
+			return nil, err
+		}
+	}
+	return subscription, nil
+}
+
 func GetUsageRecordAsync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string, callback func(*UsageRecord) error) error {
 	return usages.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as UsageRecord
@@ -296,21 +288,19 @@ func GetUsageRecordAsync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey
 }
 
 func GetUsageRecordSync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string) (*UsageRecord, error) {
-	// Load UsageRecord Information
-	ch := make(chan *UsageRecord, 1)
-	err := GetUsageRecordAsync(usages, alias, key, usageAlias, func(usage *UsageRecord) error {
-		ch <- usage
-		return nil
-	})
-	if err != nil {
-		return nil, err
+	var usage *UsageRecord
+	if err := GetUsageRecordAsync(usages, alias, key, usageAlias, func(u *UsageRecord) error {
+		usage = u
+		return bcgo.StopIterationError{}
+	}); err != nil {
+		switch err.(type) {
+		case *bcgo.StopIterationError:
+			// Do nothing
+		default:
+			return nil, err
+		}
 	}
-	select {
-	case usage := <-ch:
-		return usage, nil
-	case <-time.After(1 * time.Minute):
-		return nil, errors.New("Timeout getting usage - 1 minute")
-	}
+	return usage, nil
 }
 
 func ConstructEvent(data []byte, signature string) (stripe.Event, error) {
