@@ -204,8 +204,9 @@ func GetChargeSync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, cha
 		return bcgo.StopIterationError{}
 	}); err != nil {
 		switch err.(type) {
-		case *bcgo.StopIterationError:
+		case bcgo.StopIterationError:
 			// Do nothing
+			break
 		default:
 			return nil, err
 		}
@@ -234,8 +235,9 @@ func GetCustomerSync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey,
 		return bcgo.StopIterationError{}
 	}); err != nil {
 		switch err.(type) {
-		case *bcgo.StopIterationError:
+		case bcgo.StopIterationError:
 			// Do nothing
+			break
 		default:
 			return nil, err
 		}
@@ -264,8 +266,9 @@ func GetSubscriptionSync(subscriptions *bcgo.Channel, alias string, key *rsa.Pri
 		return bcgo.StopIterationError{}
 	}); err != nil {
 		switch err.(type) {
-		case *bcgo.StopIterationError:
+		case bcgo.StopIterationError:
 			// Do nothing
+			break
 		default:
 			return nil, err
 		}
@@ -294,8 +297,9 @@ func GetUsageRecordSync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey,
 		return bcgo.StopIterationError{}
 	}); err != nil {
 		switch err.(type) {
-		case *bcgo.StopIterationError:
+		case bcgo.StopIterationError:
 			// Do nothing
+			break
 		default:
 			return nil, err
 		}
