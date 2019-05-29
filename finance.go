@@ -37,20 +37,20 @@ const (
 	USAGE_RECORD = "UsageRecord"
 )
 
-func OpenChargeChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenAndSyncChannel(CHARGE)
+func OpenAndLoadChargeChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndLoadPoWChannel(CHARGE, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func OpenCustomerChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenAndSyncChannel(CUSTOMER)
+func OpenAndLoadCustomerChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndLoadPoWChannel(CUSTOMER, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func OpenSubscriptionChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenAndSyncChannel(SUBSCRIPTION)
+func OpenAndLoadSubscriptionChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndLoadPoWChannel(SUBSCRIPTION, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func OpenUsageRecordChannel() (*bcgo.Channel, error) {
-	return bcgo.OpenAndSyncChannel(USAGE_RECORD)
+func OpenAndLoadUsageRecordChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndLoadPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
 func NewCharge(alias string, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
@@ -183,8 +183,11 @@ func NewUsageRecord(alias string, subscription string, timestamp int64, size int
 	return ur, usage, nil
 }
 
-func GetChargeAsync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge) error) error {
-	return charges.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func GetChargeAsync(charges bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge) error) error {
+	if err := bcgo.LoadHead(charges, cache, nil); err != nil {
+		log.Println(err)
+	}
+	return bcgo.Read(charges.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Charge
 		charge := &Charge{}
 		err := proto.Unmarshal(data, charge)
@@ -197,9 +200,9 @@ func GetChargeAsync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, ch
 	})
 }
 
-func GetChargeSync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, chargeAlias string) (*Charge, error) {
+func GetChargeSync(charges bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, chargeAlias string) (*Charge, error) {
 	var charge *Charge
-	if err := GetChargeAsync(charges, alias, key, chargeAlias, func(c *Charge) error {
+	if err := GetChargeAsync(charges, cache, alias, key, chargeAlias, func(c *Charge) error {
 		charge = c
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -214,8 +217,11 @@ func GetChargeSync(charges *bcgo.Channel, alias string, key *rsa.PrivateKey, cha
 	return charge, nil
 }
 
-func GetCustomerAsync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer) error) error {
-	return customers.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func GetCustomerAsync(customers bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer) error) error {
+	if err := bcgo.LoadHead(customers, cache, nil); err != nil {
+		log.Println(err)
+	}
+	return bcgo.Read(customers.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Customer
 		customer := &Customer{}
 		err := proto.Unmarshal(data, customer)
@@ -228,9 +234,9 @@ func GetCustomerAsync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey
 	})
 }
 
-func GetCustomerSync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey, customerAlias string) (*Customer, error) {
+func GetCustomerSync(customers bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, customerAlias string) (*Customer, error) {
 	var customer *Customer
-	if err := GetCustomerAsync(customers, alias, key, customerAlias, func(c *Customer) error {
+	if err := GetCustomerAsync(customers, cache, alias, key, customerAlias, func(c *Customer) error {
 		customer = c
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -245,8 +251,11 @@ func GetCustomerSync(customers *bcgo.Channel, alias string, key *rsa.PrivateKey,
 	return customer, nil
 }
 
-func GetSubscriptionAsync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription) error) error {
-	return subscriptions.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription) error) error {
+	if err := bcgo.LoadHead(subscriptions, cache, nil); err != nil {
+		log.Println(err)
+	}
+	return bcgo.Read(subscriptions.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Subscription
 		subscription := &Subscription{}
 		err := proto.Unmarshal(data, subscription)
@@ -259,9 +268,9 @@ func GetSubscriptionAsync(subscriptions *bcgo.Channel, alias string, key *rsa.Pr
 	})
 }
 
-func GetSubscriptionSync(subscriptions *bcgo.Channel, alias string, key *rsa.PrivateKey, subscriptionAlias string) (*Subscription, error) {
+func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias string) (*Subscription, error) {
 	var subscription *Subscription
-	if err := GetSubscriptionAsync(subscriptions, alias, key, subscriptionAlias, func(s *Subscription) error {
+	if err := GetSubscriptionAsync(subscriptions, cache, alias, key, subscriptionAlias, func(s *Subscription) error {
 		subscription = s
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -276,8 +285,11 @@ func GetSubscriptionSync(subscriptions *bcgo.Channel, alias string, key *rsa.Pri
 	return subscription, nil
 }
 
-func GetUsageRecordAsync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string, callback func(*UsageRecord) error) error {
-	return usages.Read(alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+func GetUsageRecordAsync(usages bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, usageAlias string, callback func(*UsageRecord) error) error {
+	if err := bcgo.LoadHead(usages, cache, nil); err != nil {
+		log.Println(err)
+	}
+	return bcgo.Read(usages.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as UsageRecord
 		usage := &UsageRecord{}
 		err := proto.Unmarshal(data, usage)
@@ -290,9 +302,9 @@ func GetUsageRecordAsync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey
 	})
 }
 
-func GetUsageRecordSync(usages *bcgo.Channel, alias string, key *rsa.PrivateKey, usageAlias string) (*UsageRecord, error) {
+func GetUsageRecordSync(usages bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, usageAlias string) (*UsageRecord, error) {
 	var usage *UsageRecord
-	if err := GetUsageRecordAsync(usages, alias, key, usageAlias, func(u *UsageRecord) error {
+	if err := GetUsageRecordAsync(usages, cache, alias, key, usageAlias, func(u *UsageRecord) error {
 		usage = u
 		return bcgo.StopIterationError{}
 	}); err != nil {
