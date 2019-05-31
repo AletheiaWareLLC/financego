@@ -53,7 +53,7 @@ func OpenAndLoadUsageRecordChannel(cache bcgo.Cache, network bcgo.Network) *bcgo
 	return bcgo.OpenAndLoadPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func NewCharge(alias string, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
+func NewCharge(alias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	chargeParams := &stripe.ChargeParams{
@@ -77,7 +77,7 @@ func NewCharge(alias string, paymentId string, amount int64, description string)
 	return ch, charge, nil
 }
 
-func NewCustomer(alias string, email string, paymentId string, description string) (*stripe.Customer, *Customer, error) {
+func NewCustomer(alias, email, paymentId, description string) (*stripe.Customer, *Customer, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	// Create new Stripe customer
 	customerParams := &stripe.CustomerParams{
@@ -126,7 +126,7 @@ func NewCustomerCharge(customer *Customer, amount int64, description string) (*s
 	return ch, charge, nil
 }
 
-func NewSubscription(alias string, customerId string, paymentId string, productId string, planId string) (*stripe.Subscription, *Subscription, error) {
+func NewSubscription(alias, customerId, paymentId, productId, planId string) (*stripe.Subscription, *Subscription, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	// Create new Stripe subscription
 	subscriptionParams := &stripe.SubscriptionParams{
@@ -251,7 +251,7 @@ func GetCustomerSync(customers bcgo.Channel, cache bcgo.Cache, alias string, key
 	return customer, nil
 }
 
-func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias string, callback func(*Subscription) error) error {
+func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias, productId, planId string, callback func(*Subscription) error) error {
 	if err := bcgo.LoadHead(subscriptions, cache, nil); err != nil {
 		log.Println(err)
 	}
@@ -261,16 +261,16 @@ func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, alias st
 		err := proto.Unmarshal(data, subscription)
 		if err != nil {
 			return err
-		} else if subscription.Alias == subscriptionAlias {
+		} else if subscription.Alias == subscriptionAlias && (productId == "" || subscription.ProductId == productId) && (planId == "" || subscription.PlanId == planId) {
 			return callback(subscription)
 		}
 		return nil
 	})
 }
 
-func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias string) (*Subscription, error) {
+func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias, productId, planId string) (*Subscription, error) {
 	var subscription *Subscription
-	if err := GetSubscriptionAsync(subscriptions, cache, alias, key, subscriptionAlias, func(s *Subscription) error {
+	if err := GetSubscriptionAsync(subscriptions, cache, alias, key, subscriptionAlias, productId, planId, func(s *Subscription) error {
 		subscription = s
 		return bcgo.StopIterationError{}
 	}); err != nil {
