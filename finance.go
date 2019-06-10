@@ -32,28 +32,28 @@ import (
 
 const (
 	CHARGE       = "Charge"
-	CUSTOMER     = "Customer"
+	REGISTRATION = "Registration"
 	SUBSCRIPTION = "Subscription"
 	USAGE_RECORD = "UsageRecord"
 )
 
-func OpenAndLoadChargeChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndLoadPoWChannel(CHARGE, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenAndPullChargeChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndPullPoWChannel(CHARGE, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func OpenAndLoadCustomerChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndLoadPoWChannel(CUSTOMER, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenAndPullRegistrationChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndPullPoWChannel(REGISTRATION, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func OpenAndLoadSubscriptionChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndLoadPoWChannel(SUBSCRIPTION, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenAndPullSubscriptionChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndPullPoWChannel(SUBSCRIPTION, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func OpenAndLoadUsageRecordChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndLoadPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenAndPullUsageRecordChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
+	return bcgo.OpenAndPullPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD, cache, network)
 }
 
-func NewCharge(alias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
+func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	chargeParams := &stripe.ChargeParams{
@@ -68,16 +68,17 @@ func NewCharge(alias, paymentId string, amount int64, description string) (*stri
 	}
 
 	charge := &Charge{
-		Alias:     alias,
-		Processor: PaymentProcessor_STRIPE,
-		PaymentId: paymentId,
-		ChargeId:  ch.ID,
+		MerchantAlias: merchantAlias,
+		CustomerAlias: customerAlias,
+		Processor:     PaymentProcessor_STRIPE,
+		PaymentId:     paymentId,
+		ChargeId:      ch.ID,
 	}
 	log.Println("Charge", charge)
 	return ch, charge, nil
 }
 
-func NewCustomer(alias, email, paymentId, description string) (*stripe.Customer, *Customer, error) {
+func NewRegistration(merchantAlias, customerAlias, email, paymentId, description string) (*stripe.Customer, *Registration, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	// Create new Stripe customer
 	customerParams := &stripe.CustomerParams{
@@ -92,23 +93,24 @@ func NewCustomer(alias, email, paymentId, description string) (*stripe.Customer,
 		return nil, nil, err
 	}
 
-	customer := &Customer{
-		Alias:      alias,
-		Processor:  PaymentProcessor_STRIPE,
-		CustomerId: c.ID,
-		PaymentId:  paymentId,
+	registration := &Registration{
+		MerchantAlias: merchantAlias,
+		CustomerAlias: customerAlias,
+		Processor:     PaymentProcessor_STRIPE,
+		CustomerId:    c.ID,
+		PaymentId:     paymentId,
 	}
-	log.Println("Customer", customer)
-	return c, customer, nil
+	log.Println("Registration", registration)
+	return c, registration, nil
 }
 
-func NewCustomerCharge(customer *Customer, amount int64, description string) (*stripe.Charge, *Charge, error) {
+func NewCustomerCharge(registration *Registration, amount int64, description string) (*stripe.Charge, *Charge, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	chargeParams := &stripe.ChargeParams{
 		Amount:      stripe.Int64(amount),
 		Currency:    stripe.String(string(stripe.CurrencyUSD)),
-		Customer:    stripe.String(customer.CustomerId),
+		Customer:    stripe.String(registration.CustomerId),
 		Description: stripe.String(description),
 	}
 	ch, err := charge.New(chargeParams)
@@ -117,16 +119,17 @@ func NewCustomerCharge(customer *Customer, amount int64, description string) (*s
 	}
 
 	charge := &Charge{
-		Alias:      customer.Alias,
-		Processor:  PaymentProcessor_STRIPE,
-		CustomerId: customer.CustomerId,
-		ChargeId:   ch.ID,
+		MerchantAlias: registration.MerchantAlias,
+		CustomerAlias: registration.CustomerAlias,
+		Processor:     PaymentProcessor_STRIPE,
+		CustomerId:    registration.CustomerId,
+		ChargeId:      ch.ID,
 	}
 	log.Println("Charge", charge)
 	return ch, charge, nil
 }
 
-func NewSubscription(alias, customerId, paymentId, productId, planId string) (*stripe.Subscription, *Subscription, error) {
+func NewSubscription(merchantAlias, customerAlias, customerId, paymentId, productId, planId string) (*stripe.Subscription, *Subscription, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	// Create new Stripe subscription
 	subscriptionParams := &stripe.SubscriptionParams{
@@ -144,7 +147,8 @@ func NewSubscription(alias, customerId, paymentId, productId, planId string) (*s
 
 	// Create subscription
 	subscription := &Subscription{
-		Alias:              alias,
+		MerchantAlias:      merchantAlias,
+		CustomerAlias:      customerAlias,
 		Processor:          PaymentProcessor_STRIPE,
 		CustomerId:         customerId,
 		ProductId:          productId,
@@ -159,7 +163,7 @@ func NewSubscription(alias, customerId, paymentId, productId, planId string) (*s
 	return s, subscription, nil
 }
 
-func NewUsageRecord(alias string, subscription string, timestamp int64, size int64) (*stripe.UsageRecord, *UsageRecord, error) {
+func NewUsageRecord(merchantAlias, customerAlias, subscription string, timestamp int64, size int64) (*stripe.UsageRecord, *UsageRecord, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	params := &stripe.UsageRecordParams{
@@ -174,7 +178,8 @@ func NewUsageRecord(alias string, subscription string, timestamp int64, size int
 
 	// Create usage record
 	usage := &UsageRecord{
-		Alias:          alias,
+		MerchantAlias:  merchantAlias,
+		CustomerAlias:  customerAlias,
 		Processor:      PaymentProcessor_STRIPE,
 		SubscriptionId: subscription,
 		UsageRecordId:  ur.ID,
@@ -183,26 +188,33 @@ func NewUsageRecord(alias string, subscription string, timestamp int64, size int
 	return ur, usage, nil
 }
 
-func GetChargeAsync(charges bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, chargeAlias string, callback func(*Charge) error) error {
+func GetChargeAsync(charges bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*Charge) error) error {
 	if err := bcgo.LoadHead(charges, cache, nil); err != nil {
 		log.Println(err)
 	}
-	return bcgo.Read(charges.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	head := charges.GetHead()
+	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Charge
 		charge := &Charge{}
 		err := proto.Unmarshal(data, charge)
 		if err != nil {
 			return err
-		} else if charge.Alias == chargeAlias {
+		} else if (merchantAlias == "" || charge.MerchantAlias == merchantAlias) && (customerAlias == "" || charge.CustomerAlias == customerAlias) {
 			return callback(charge)
 		}
 		return nil
-	})
+	}
+	// Read as merchant
+	if merchantAlias != "" && merchantKey != nil {
+		return bcgo.Read(head, nil, cache, merchantAlias, merchantKey, nil, cb)
+	}
+	// Read as customer
+	return bcgo.Read(head, nil, cache, customerAlias, customerKey, nil, cb)
 }
 
-func GetChargeSync(charges bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, chargeAlias string) (*Charge, error) {
+func GetChargeSync(charges bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey) (*Charge, error) {
 	var charge *Charge
-	if err := GetChargeAsync(charges, cache, alias, key, chargeAlias, func(c *Charge) error {
+	if err := GetChargeAsync(charges, cache, merchantAlias, merchantKey, customerAlias, customerKey, func(c *Charge) error {
 		charge = c
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -217,27 +229,34 @@ func GetChargeSync(charges bcgo.Channel, cache bcgo.Cache, alias string, key *rs
 	return charge, nil
 }
 
-func GetCustomerAsync(customers bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, customerAlias string, callback func(*Customer) error) error {
-	if err := bcgo.LoadHead(customers, cache, nil); err != nil {
+func GetRegistrationAsync(registrations bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*Registration) error) error {
+	if err := bcgo.LoadHead(registrations, cache, nil); err != nil {
 		log.Println(err)
 	}
-	return bcgo.Read(customers.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
-		// Unmarshal as Customer
-		customer := &Customer{}
-		err := proto.Unmarshal(data, customer)
+	head := registrations.GetHead()
+	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
+		// Unmarshal as Registration
+		registration := &Registration{}
+		err := proto.Unmarshal(data, registration)
 		if err != nil {
 			return err
-		} else if customer.Alias == customerAlias {
-			return callback(customer)
+		} else if (merchantAlias == "" || registration.MerchantAlias == merchantAlias) && (customerAlias == "" || registration.CustomerAlias == customerAlias) {
+			return callback(registration)
 		}
 		return nil
-	})
+	}
+	// Read as merchant
+	if merchantAlias != "" && merchantKey != nil {
+		return bcgo.Read(head, nil, cache, merchantAlias, merchantKey, nil, cb)
+	}
+	// Read as customer
+	return bcgo.Read(head, nil, cache, customerAlias, customerKey, nil, cb)
 }
 
-func GetCustomerSync(customers bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, customerAlias string) (*Customer, error) {
-	var customer *Customer
-	if err := GetCustomerAsync(customers, cache, alias, key, customerAlias, func(c *Customer) error {
-		customer = c
+func GetRegistrationSync(registrations bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey) (*Registration, error) {
+	var registration *Registration
+	if err := GetRegistrationAsync(registrations, cache, merchantAlias, merchantKey, customerAlias, customerKey, func(r *Registration) error {
+		registration = r
 		return bcgo.StopIterationError{}
 	}); err != nil {
 		switch err.(type) {
@@ -248,29 +267,36 @@ func GetCustomerSync(customers bcgo.Channel, cache bcgo.Cache, alias string, key
 			return nil, err
 		}
 	}
-	return customer, nil
+	return registration, nil
 }
 
-func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias, productId, planId string, callback func(*Subscription) error) error {
+func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, productId, planId string, callback func(*Subscription) error) error {
 	if err := bcgo.LoadHead(subscriptions, cache, nil); err != nil {
 		log.Println(err)
 	}
-	return bcgo.Read(subscriptions.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	head := subscriptions.GetHead()
+	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as Subscription
 		subscription := &Subscription{}
 		err := proto.Unmarshal(data, subscription)
 		if err != nil {
 			return err
-		} else if subscription.Alias == subscriptionAlias && (productId == "" || subscription.ProductId == productId) && (planId == "" || subscription.PlanId == planId) {
+		} else if (merchantAlias == "" || subscription.MerchantAlias == merchantAlias) && (customerAlias == "" || subscription.CustomerAlias == customerAlias) && (productId == "" || subscription.ProductId == productId) && (planId == "" || subscription.PlanId == planId) {
 			return callback(subscription)
 		}
 		return nil
-	})
+	}
+	// Read as merchant
+	if merchantAlias != "" && merchantKey != nil {
+		return bcgo.Read(head, nil, cache, merchantAlias, merchantKey, nil, cb)
+	}
+	// Read as customer
+	return bcgo.Read(head, nil, cache, customerAlias, customerKey, nil, cb)
 }
 
-func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, subscriptionAlias, productId, planId string) (*Subscription, error) {
+func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, productId, planId string) (*Subscription, error) {
 	var subscription *Subscription
-	if err := GetSubscriptionAsync(subscriptions, cache, alias, key, subscriptionAlias, productId, planId, func(s *Subscription) error {
+	if err := GetSubscriptionAsync(subscriptions, cache, merchantAlias, merchantKey, customerAlias, customerKey, productId, planId, func(s *Subscription) error {
 		subscription = s
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -285,26 +311,33 @@ func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, alias str
 	return subscription, nil
 }
 
-func GetUsageRecordAsync(usages bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, usageAlias string, callback func(*UsageRecord) error) error {
+func GetUsageRecordAsync(usages bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*UsageRecord) error) error {
 	if err := bcgo.LoadHead(usages, cache, nil); err != nil {
 		log.Println(err)
 	}
-	return bcgo.Read(usages.GetHead(), nil, cache, alias, key, nil, func(entry *bcgo.BlockEntry, key, data []byte) error {
+	head := usages.GetHead()
+	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
 		// Unmarshal as UsageRecord
 		usage := &UsageRecord{}
 		err := proto.Unmarshal(data, usage)
 		if err != nil {
 			return err
-		} else if usage.Alias == usageAlias {
+		} else if (merchantAlias == "" || usage.MerchantAlias == merchantAlias) && (customerAlias == "" || usage.CustomerAlias == customerAlias) {
 			return callback(usage)
 		}
 		return nil
-	})
+	}
+	// Read as merchant
+	if merchantAlias != "" && merchantKey != nil {
+		return bcgo.Read(head, nil, cache, merchantAlias, merchantKey, nil, cb)
+	}
+	// Read as customer
+	return bcgo.Read(head, nil, cache, customerAlias, customerKey, nil, cb)
 }
 
-func GetUsageRecordSync(usages bcgo.Channel, cache bcgo.Cache, alias string, key *rsa.PrivateKey, usageAlias string) (*UsageRecord, error) {
+func GetUsageRecordSync(usages bcgo.Channel, cache bcgo.Cache, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey) (*UsageRecord, error) {
 	var usage *UsageRecord
-	if err := GetUsageRecordAsync(usages, cache, alias, key, usageAlias, func(u *UsageRecord) error {
+	if err := GetUsageRecordAsync(usages, cache, merchantAlias, merchantKey, customerAlias, customerKey, func(u *UsageRecord) error {
 		usage = u
 		return bcgo.StopIterationError{}
 	}); err != nil {
