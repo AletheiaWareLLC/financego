@@ -37,20 +37,20 @@ const (
 	USAGE_RECORD = "UsageRecord"
 )
 
-func OpenAndPullChargeChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndPullPoWChannel(CHARGE, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenChargeChannel() *bcgo.PoWChannel {
+	return bcgo.OpenPoWChannel(CHARGE, bcgo.THRESHOLD_STANDARD)
 }
 
-func OpenAndPullRegistrationChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndPullPoWChannel(REGISTRATION, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenRegistrationChannel() *bcgo.PoWChannel {
+	return bcgo.OpenPoWChannel(REGISTRATION, bcgo.THRESHOLD_STANDARD)
 }
 
-func OpenAndPullSubscriptionChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndPullPoWChannel(SUBSCRIPTION, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenSubscriptionChannel() *bcgo.PoWChannel {
+	return bcgo.OpenPoWChannel(SUBSCRIPTION, bcgo.THRESHOLD_STANDARD)
 }
 
-func OpenAndPullUsageRecordChannel(cache bcgo.Cache, network bcgo.Network) *bcgo.PoWChannel {
-	return bcgo.OpenAndPullPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD, cache, network)
+func OpenUsageRecordChannel() *bcgo.PoWChannel {
+	return bcgo.OpenPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD)
 }
 
 func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
