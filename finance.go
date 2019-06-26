@@ -54,6 +54,11 @@ func OpenUsageRecordChannel() *bcgo.PoWChannel {
 }
 
 func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
+	// Stripe's minimum charge amount is 50 cents
+	if amount < 50 {
+		amount = 50
+	}
+
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	chargeParams := &stripe.ChargeParams{
