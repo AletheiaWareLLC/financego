@@ -82,6 +82,7 @@ func NewRegistration(merchantAlias, customerAlias, email, paymentId, description
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 	// Create new Stripe customer
 	customerParams := &stripe.CustomerParams{
+		Name:        stripe.String(customerAlias),
 		Description: stripe.String(description),
 		Email:       stripe.String(email),
 	}
