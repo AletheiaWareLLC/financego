@@ -78,6 +78,7 @@ func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, des
 		Processor:     PaymentProcessor_STRIPE,
 		PaymentId:     paymentId,
 		ChargeId:      ch.ID,
+		Amount:        amount,
 	}
 	log.Println("Charge", charge)
 	return ch, charge, nil
@@ -111,6 +112,11 @@ func NewRegistration(merchantAlias, customerAlias, email, paymentId, description
 }
 
 func NewCustomerCharge(registration *Registration, amount int64, description string) (*stripe.Charge, *Charge, error) {
+	// Stripe's minimum charge amount is 50 cents
+	if amount < 50 {
+		amount = 50
+	}
+
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	chargeParams := &stripe.ChargeParams{
@@ -130,6 +136,7 @@ func NewCustomerCharge(registration *Registration, amount int64, description str
 		Processor:     PaymentProcessor_STRIPE,
 		CustomerId:    registration.CustomerId,
 		ChargeId:      ch.ID,
+		Amount:        amount,
 	}
 	log.Println("Charge", charge)
 	return ch, charge, nil
@@ -189,6 +196,7 @@ func NewUsageRecord(merchantAlias, customerAlias, subscription string, timestamp
 		Processor:      PaymentProcessor_STRIPE,
 		SubscriptionId: subscription,
 		UsageRecordId:  ur.ID,
+		Quantity:       size,
 	}
 	log.Println("UsageRecord", usage)
 	return ur, usage, nil
