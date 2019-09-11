@@ -30,29 +30,6 @@ import (
 	"os"
 )
 
-const (
-	CHARGE       = "Charge"
-	REGISTRATION = "Registration"
-	SUBSCRIPTION = "Subscription"
-	USAGE_RECORD = "UsageRecord"
-)
-
-func OpenChargeChannel() *bcgo.PoWChannel {
-	return bcgo.OpenPoWChannel(CHARGE, bcgo.THRESHOLD_STANDARD)
-}
-
-func OpenRegistrationChannel() *bcgo.PoWChannel {
-	return bcgo.OpenPoWChannel(REGISTRATION, bcgo.THRESHOLD_STANDARD)
-}
-
-func OpenSubscriptionChannel() *bcgo.PoWChannel {
-	return bcgo.OpenPoWChannel(SUBSCRIPTION, bcgo.THRESHOLD_STANDARD)
-}
-
-func OpenUsageRecordChannel() *bcgo.PoWChannel {
-	return bcgo.OpenPoWChannel(USAGE_RECORD, bcgo.THRESHOLD_STANDARD)
-}
-
 func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
 	// Stripe's minimum charge amount is 50 cents
 	if amount < 50 {
