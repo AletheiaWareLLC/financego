@@ -30,7 +30,7 @@ import (
 	"os"
 )
 
-func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, description string) (*stripe.Charge, *Charge, error) {
+func NewCharge(merchantAlias, customerAlias, paymentId, productId, planId, country, currency string, amount int64, description string) (*stripe.Charge, *Charge, error) {
 	// Stripe's minimum charge amount is 50 cents
 	if amount < 50 {
 		amount = 50
@@ -56,6 +56,11 @@ func NewCharge(merchantAlias, customerAlias, paymentId string, amount int64, des
 		PaymentId:     paymentId,
 		ChargeId:      ch.ID,
 		Amount:        amount,
+		ProductId:     productId,
+		PlanId:        planId,
+		Country:       country,
+		Currency:      currency,
+		Description:   description,
 	}
 	log.Println("Charge", charge)
 	return ch, charge, nil
@@ -88,7 +93,7 @@ func NewRegistration(merchantAlias, customerAlias, email, paymentId, description
 	return c, registration, nil
 }
 
-func NewCustomerCharge(registration *Registration, amount int64, description string) (*stripe.Charge, *Charge, error) {
+func NewCustomerCharge(registration *Registration, productId, planId, country, currency string, amount int64, description string) (*stripe.Charge, *Charge, error) {
 	// Stripe's minimum charge amount is 50 cents
 	if amount < 50 {
 		amount = 50
@@ -114,6 +119,11 @@ func NewCustomerCharge(registration *Registration, amount int64, description str
 		CustomerId:    registration.CustomerId,
 		ChargeId:      ch.ID,
 		Amount:        amount,
+		ProductId:     productId,
+		PlanId:        planId,
+		Country:       country,
+		Currency:      currency,
+		Description:   description,
 	}
 	log.Println("Charge", charge)
 	return ch, charge, nil
@@ -153,11 +163,11 @@ func NewSubscription(merchantAlias, customerAlias, customerId, paymentId, produc
 	return s, subscription, nil
 }
 
-func NewUsageRecord(merchantAlias, customerAlias, subscription string, timestamp int64, size int64) (*stripe.UsageRecord, *UsageRecord, error) {
+func NewUsageRecord(merchantAlias, customerAlias, subscriptionId, subscriptionItemId, productId, planId string, timestamp int64, size int64) (*stripe.UsageRecord, *UsageRecord, error) {
 	stripe.Key = os.Getenv("STRIPE_SECRET_KEY")
 
 	params := &stripe.UsageRecordParams{
-		SubscriptionItem: stripe.String(subscription),
+		SubscriptionItem: stripe.String(subscriptionItemId),
 		Timestamp:        stripe.Int64(timestamp),
 		Quantity:         stripe.Int64(size),
 	}
@@ -168,12 +178,15 @@ func NewUsageRecord(merchantAlias, customerAlias, subscription string, timestamp
 
 	// Create usage record
 	usage := &UsageRecord{
-		MerchantAlias:  merchantAlias,
-		CustomerAlias:  customerAlias,
-		Processor:      PaymentProcessor_STRIPE,
-		SubscriptionId: subscription,
-		UsageRecordId:  ur.ID,
-		Quantity:       size,
+		MerchantAlias:      merchantAlias,
+		CustomerAlias:      customerAlias,
+		Processor:          PaymentProcessor_STRIPE,
+		SubscriptionId:     subscriptionId,
+		SubscriptionItemId: subscriptionItemId,
+		UsageRecordId:      ur.ID,
+		Quantity:           size,
+		ProductId:          productId,
+		PlanId:             planId,
 	}
 	log.Println("UsageRecord", usage)
 	return ur, usage, nil
