@@ -193,7 +193,7 @@ func NewUsageRecord(merchantAlias, customerAlias, subscriptionId, subscriptionIt
 }
 
 func GetChargeAsync(charges bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*Charge) error) error {
-	if err := bcgo.LoadHead(charges, cache, nil); err != nil {
+	if err := bcgo.LoadCachedHead(charges, cache); err != nil {
 		log.Println(err)
 	}
 	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
@@ -233,7 +233,7 @@ func GetChargeSync(charges bcgo.Channel, cache bcgo.Cache, network bcgo.Network,
 }
 
 func GetRegistrationAsync(registrations bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*Registration) error) error {
-	if err := bcgo.LoadHead(registrations, cache, nil); err != nil {
+	if err := bcgo.LoadCachedHead(registrations, cache); err != nil {
 		log.Println(err)
 	}
 	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
@@ -273,7 +273,7 @@ func GetRegistrationSync(registrations bcgo.Channel, cache bcgo.Cache, network b
 }
 
 func GetSubscriptionAsync(subscriptions bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, productId, planId string, callback func(*Subscription) error) error {
-	if err := bcgo.LoadHead(subscriptions, cache, nil); err != nil {
+	if err := bcgo.LoadCachedHead(subscriptions, cache); err != nil {
 		log.Println(err)
 	}
 	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
@@ -313,7 +313,7 @@ func GetSubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, network b
 }
 
 func GetUsageRecordAsync(usages bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*UsageRecord) error) error {
-	if err := bcgo.LoadHead(usages, cache, nil); err != nil {
+	if err := bcgo.LoadCachedHead(usages, cache); err != nil {
 		log.Println(err)
 	}
 	cb := func(entry *bcgo.BlockEntry, key, data []byte) error {
