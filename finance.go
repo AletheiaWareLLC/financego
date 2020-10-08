@@ -356,3 +356,19 @@ func ConstructEvent(data []byte, signature string) (stripe.Event, error) {
 	secretKey := os.Getenv("STRIPE_WEB_HOOK_SECRET_KEY")
 	return webhook.ConstructEvent(data, signature, secretKey)
 }
+
+func IntervalToString(interval Service_Interval) string {
+	switch interval {
+	case Service_DAILY:
+		return "Day"
+	case Service_WEEKLY:
+		return "Week"
+	case Service_MONTHLY:
+		return "Month"
+	case Service_QUARTERLY: // Every 3 months
+		return "Quarter"
+	case Service_YEARLY:
+		return "Year"
+	}
+	return "?"
+}
