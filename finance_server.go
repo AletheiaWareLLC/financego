@@ -88,8 +88,8 @@ func Register(merchant *bcgo.Node, processor Processor, aliases, registrations *
 	}
 }
 
-func Subscribe(merchant *bcgo.Node, processor Processor, aliases, subscriptions *bcgo.Channel, threshold uint64, listener bcgo.MiningListener) func(string, string, string, string) (string, *bcgo.Reference, error) {
-	return func(customerAlias, customerID, productId, planId string) (string, *bcgo.Reference, error) {
+func Subscribe(merchant *bcgo.Node, processor Processor, aliases, subscriptions *bcgo.Channel, threshold uint64, listener bcgo.MiningListener, productId, planId string) func(string, string) (string, *bcgo.Reference, error) {
+	return func(customerAlias, customerID string) (string, *bcgo.Reference, error) {
 		cache := merchant.Cache
 		network := merchant.Network
 

@@ -132,8 +132,8 @@ func TestSubscribe(t *testing.T) {
 	testinggo.AssertNoError(t, err)
 	_, _, err = nodeA.Mine(aliases, aliasgo.ALIAS_THRESHOLD, listener)
 	testinggo.AssertNoError(t, err)
-	handler := financego.Subscribe(nodeA, provider, aliases, subscriptions, 0, listener)
-	subscriptionItemID, subscriptionReference, err := handler("Bob", expectedCustomerID, expectedProductId, expectedPlanId)
+	handler := financego.Subscribe(nodeA, provider, aliases, subscriptions, 0, listener, expectedProductId, expectedPlanId)
+	subscriptionItemID, subscriptionReference, err := handler("Bob", expectedCustomerID)
 	testinggo.AssertNoError(t, err)
 	if subscriptionItemID != expectedSubscriptionItemId {
 		t.Fatalf("Wrong subscription item ID: expected '%s' , instead got '%s'", subscriptionItemID, expectedSubscriptionItemId)
