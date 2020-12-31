@@ -17,9 +17,9 @@
 package financego
 
 import (
+	"aletheiaware.com/aliasgo"
+	"aletheiaware.com/bcgo"
 	"crypto/rsa"
-	"github.com/AletheiaWareLLC/aliasgo"
-	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/golang/protobuf/proto"
 	"log"
 )

@@ -1,11 +1,11 @@
-module github.com/AletheiaWareLLC/financego
+module aletheiaware.com/financego
 
 go 1.14
 
 require (
-	github.com/AletheiaWareLLC/aliasgo v1.0.0
-	github.com/AletheiaWareLLC/bcgo v1.0.0
-	github.com/AletheiaWareLLC/testinggo v1.0.0
+	aletheiaware.com/aliasgo v1.1.0
+	aletheiaware.com/bcgo v1.1.0
+	aletheiaware.com/testinggo v1.1.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/kr/text v0.2.0 // indirect
