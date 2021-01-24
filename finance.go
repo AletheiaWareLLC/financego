@@ -31,7 +31,15 @@ type Processor interface {
 	NewUsageRecord(merchantAlias, customerAlias, subscriptionId, subscriptionItemId, productId, planId string, timestamp int64, size int64) (*UsageRecord, error)
 }
 
-func GetChargeAsync(charges *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*Charge) error) error {
+type ChargeCallback func(*bcgo.BlockEntry, *Charge) error
+
+type RegistrationCallback func(*bcgo.BlockEntry, *Registration) error
+
+type SubscriptionCallback func(*bcgo.BlockEntry, *Subscription) error
+
+type UsageRecordCallback func(*bcgo.BlockEntry, *UsageRecord) error
+
+func GetChargeAsync(charges *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback ChargeCallback) error {
 	if err := charges.LoadCachedHead(cache); err != nil {
 		log.Println(err)
 	}
@@ -42,7 +50,7 @@ func GetChargeAsync(charges *bcgo.Channel, cache bcgo.Cache, network bcgo.Networ
 		if err != nil {
 			return err
 		} else if (merchantAlias == "" || charge.MerchantAlias == merchantAlias) && (customerAlias == "" || charge.CustomerAlias == customerAlias) {
-			return callback(charge)
+			return callback(entry, charge)
 		}
 		return nil
 	}
@@ -56,7 +64,7 @@ func GetChargeAsync(charges *bcgo.Channel, cache bcgo.Cache, network bcgo.Networ
 
 func GetChargeSync(charges *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey) (*Charge, error) {
 	var charge *Charge
-	if err := GetChargeAsync(charges, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, func(c *Charge) error {
+	if err := GetChargeAsync(charges, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, func(e *bcgo.BlockEntry, c *Charge) error {
 		charge = c
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -71,7 +79,7 @@ func GetChargeSync(charges *bcgo.Channel, cache bcgo.Cache, network bcgo.Network
 	return charge, nil
 }
 
-func GetRegistrationAsync(registrations *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*Registration) error) error {
+func GetRegistrationAsync(registrations *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback RegistrationCallback) error {
 	if err := registrations.LoadCachedHead(cache); err != nil {
 		log.Println(err)
 	}
@@ -82,7 +90,7 @@ func GetRegistrationAsync(registrations *bcgo.Channel, cache bcgo.Cache, network
 		if err != nil {
 			return err
 		} else if (merchantAlias == "" || registration.MerchantAlias == merchantAlias) && (customerAlias == "" || registration.CustomerAlias == customerAlias) {
-			return callback(registration)
+			return callback(entry, registration)
 		}
 		return nil
 	}
@@ -96,7 +104,7 @@ func GetRegistrationAsync(registrations *bcgo.Channel, cache bcgo.Cache, network
 
 func GetRegistrationSync(registrations *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey) (*Registration, error) {
 	var registration *Registration
-	if err := GetRegistrationAsync(registrations, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, func(r *Registration) error {
+	if err := GetRegistrationAsync(registrations, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, func(e *bcgo.BlockEntry, r *Registration) error {
 		registration = r
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -111,7 +119,7 @@ func GetRegistrationSync(registrations *bcgo.Channel, cache bcgo.Cache, network 
 	return registration, nil
 }
 
-func GetSubscriptionAsync(subscriptions *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, productId, planId string, callback func(*Subscription) error) error {
+func GetSubscriptionAsync(subscriptions *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, productId, planId string, callback SubscriptionCallback) error {
 	if err := subscriptions.LoadCachedHead(cache); err != nil {
 		log.Println(err)
 	}
@@ -122,7 +130,7 @@ func GetSubscriptionAsync(subscriptions *bcgo.Channel, cache bcgo.Cache, network
 		if err != nil {
 			return err
 		} else if (merchantAlias == "" || subscription.MerchantAlias == merchantAlias) && (customerAlias == "" || subscription.CustomerAlias == customerAlias) && (productId == "" || subscription.ProductId == productId) && (planId == "" || subscription.PlanId == planId) {
-			return callback(subscription)
+			return callback(entry, subscription)
 		}
 		return nil
 	}
@@ -136,7 +144,7 @@ func GetSubscriptionAsync(subscriptions *bcgo.Channel, cache bcgo.Cache, network
 
 func GetSubscriptionSync(subscriptions *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, productId, planId string) (*Subscription, error) {
 	var subscription *Subscription
-	if err := GetSubscriptionAsync(subscriptions, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, productId, planId, func(s *Subscription) error {
+	if err := GetSubscriptionAsync(subscriptions, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, productId, planId, func(e *bcgo.BlockEntry, s *Subscription) error {
 		subscription = s
 		return bcgo.StopIterationError{}
 	}); err != nil {
@@ -151,7 +159,7 @@ func GetSubscriptionSync(subscriptions *bcgo.Channel, cache bcgo.Cache, network 
 	return subscription, nil
 }
 
-func GetUsageRecordAsync(usages *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback func(*UsageRecord) error) error {
+func GetUsageRecordAsync(usages *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey, callback UsageRecordCallback) error {
 	if err := usages.LoadCachedHead(cache); err != nil {
 		log.Println(err)
 	}
@@ -162,7 +170,7 @@ func GetUsageRecordAsync(usages *bcgo.Channel, cache bcgo.Cache, network bcgo.Ne
 		if err != nil {
 			return err
 		} else if (merchantAlias == "" || usage.MerchantAlias == merchantAlias) && (customerAlias == "" || usage.CustomerAlias == customerAlias) {
-			return callback(usage)
+			return callback(entry, usage)
 		}
 		return nil
 	}
@@ -176,7 +184,7 @@ func GetUsageRecordAsync(usages *bcgo.Channel, cache bcgo.Cache, network bcgo.Ne
 
 func GetUsageRecordSync(usages *bcgo.Channel, cache bcgo.Cache, network bcgo.Network, merchantAlias string, merchantKey *rsa.PrivateKey, customerAlias string, customerKey *rsa.PrivateKey) (*UsageRecord, error) {
 	var usage *UsageRecord
-	if err := GetUsageRecordAsync(usages, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, func(u *UsageRecord) error {
+	if err := GetUsageRecordAsync(usages, cache, network, merchantAlias, merchantKey, customerAlias, customerKey, func(e *bcgo.BlockEntry, u *UsageRecord) error {
 		usage = u
 		return bcgo.StopIterationError{}
 	}); err != nil {
