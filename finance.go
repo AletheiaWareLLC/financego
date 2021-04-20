@@ -62,10 +62,10 @@ func ChargeSync(charges bcgo.Channel, cache bcgo.Cache, network bcgo.Network, re
 	var charge *Charge
 	if err := ChargeAsync(charges, cache, network, reader, merchant, customer, func(e *bcgo.BlockEntry, c *Charge) error {
 		charge = c
-		return bcgo.StopIterationError{}
+		return bcgo.ErrStopIteration{}
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -99,10 +99,10 @@ func RegistrationSync(registrations bcgo.Channel, cache bcgo.Cache, network bcgo
 	var registration *Registration
 	if err := RegistrationAsync(registrations, cache, network, reader, merchant, customer, func(e *bcgo.BlockEntry, r *Registration) error {
 		registration = r
-		return bcgo.StopIterationError{}
+		return bcgo.ErrStopIteration{}
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -136,10 +136,10 @@ func SubscriptionSync(subscriptions bcgo.Channel, cache bcgo.Cache, network bcgo
 	var subscription *Subscription
 	if err := SubscriptionAsync(subscriptions, cache, network, reader, merchant, customer, productId, planId, func(e *bcgo.BlockEntry, s *Subscription) error {
 		subscription = s
-		return bcgo.StopIterationError{}
+		return bcgo.ErrStopIteration{}
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
@@ -173,10 +173,10 @@ func UsageRecordSync(usages bcgo.Channel, cache bcgo.Cache, network bcgo.Network
 	var usage *UsageRecord
 	if err := UsageRecordAsync(usages, cache, network, reader, merchant, customer, func(e *bcgo.BlockEntry, u *UsageRecord) error {
 		usage = u
-		return bcgo.StopIterationError{}
+		return bcgo.ErrStopIteration{}
 	}); err != nil {
 		switch err.(type) {
-		case bcgo.StopIterationError:
+		case bcgo.ErrStopIteration:
 			// Do nothing
 			break
 		default:
